@@ -62,8 +62,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Prayer Times for Today</h1>
-        <div class="date-display" id="current-date"></div>
+
         <div id="message" class="message">Loading prayer times...</div>
         <div id="canvas-container"></div>
     </div>
@@ -71,11 +70,6 @@
     <script>
         // Initialize PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-
-        // Display current date
-        const today = new Date();
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        document.getElementById('current-date').textContent = today.toLocaleDateString('en-US', options);
 
         // Your PDF URL - replace with your actual PDF URL
         const pdfUrl = './shjprayertimes.pdf';
