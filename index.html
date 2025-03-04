@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,52 +8,154 @@
     <title>أوقات الصلاة في الشارقة 1446 هـ</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
-        html, body {
+        body {
+            font-family: Arial, sans-serif;
             margin: 0;
-            padding: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
             width: 100%;
-            height: 100%;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #canvas-container {
+            width: 100%;
             display: flex;
             justify-content: center;
-            align-items: center;
-            background: black;
-            overflow: hidden;
+            margin-top: 20px;
         }
         canvas {
-            display: block;
+            max-width: 100%;
+            border: 1px solid #ddd;
+        }
+        .message {
+            text-align: center;
+            margin: 20px;
+            color: #666;
+        }
+        .error-message {
+            color: #d9534f;
+            font-weight: bold;
+            text-align: center;
+            margin: 30px 0;
+            padding: 15px;
+            border: 1px solid #d9534f;
+            border-radius: 5px;
+            background-color: #f9f2f2;
         }
     </style>
 </head>
 <body>
+    <div class="container">
+        <div id="message" class="message">... انتظر لحظة</div>
+        <div id="canvas-container"></div>
+    </div>
+
     <script>
+        // Initialize PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        const pdfUrl = './shjprayertimes.pdf';
-        const pdfStartDate = new Date('2024-07-07'); 
+        // Display current date
         const today = new Date();
-        const pageNum = Math.floor((today - pdfStartDate) / (24 * 60 * 60 * 1000)) + 1;
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
 
+        // Your PDF URL - replace with your actual PDF URL
+        const pdfUrl = './shjprayertimes.pdf';
+
+        // PDF date range configuration
+        // IMPORTANT: Update these dates to match your PDF's first and last dates
+        const pdfStartDate = new Date('2024-07-07'); // First date in the PDF
+        const pdfEndDate = new Date('2025-06-25');   // Last date in the PDF
+
+        // Calculate which page to display based on date
+        function getPageForToday(today) {
+            // Check if today is within the PDF's date range
+            if (today < pdfStartDate) {
+                return -1; // Before PDF start date
+            }
+            if (today > pdfEndDate) {
+                return -2; // After PDF end date
+            }
+            
+            // Calculate days since PDF start date
+            const daysSinceStart = Math.floor((today - pdfStartDate) / (24 * 60 * 60 * 1000));
+            
+            // Assuming 1 page per day, with page 1 being the first date
+            return daysSinceStart + 1;
+        }
+
+        // Render the specific page from the PDF
         async function renderPage() {
+            const messageElement = document.getElementById('message');
+            const canvasContainer = document.getElementById('canvas-container');
+            const pageNum = getPageForToday(today);
+            
+            // Handle out-of-range dates
+            if (pageNum === -1) {
+                // Date before PDF start date
+                showErrorMessage(`The prayer times for today are not available. The calendar starts from ${pdfStartDate.toLocaleDateString('en-US', options)}.`);
+                return;
+            } else if (pageNum === -2) {
+                // Date after PDF end date
+                showErrorMessage(`The prayer times for today are not available. The calendar only goes up to ${pdfEndDate.toLocaleDateString('en-US', options)}.`);
+                return;
+            }
+            
             try {
-                const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
-                if (pageNum < 1 || pageNum > pdf.numPages) return;
-
+                // Load the PDF
+                const loadingTask = pdfjsLib.getDocument(pdfUrl);
+                const pdf = await loadingTask.promise;
+                
+                // Check if the requested page exists
+                if (pageNum > pdf.numPages) {
+                    showErrorMessage('Error: The requested page does not exist in the PDF.');
+                    return;
+                }
+                
+                // Get the specific page
                 const page = await pdf.getPage(pageNum);
+                
+                // Set scale based on viewport
                 const viewport = page.getViewport({ scale: 1.5 });
-
+                
+                // Create canvas element
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
-                canvas.width = viewport.width;
                 canvas.height = viewport.height;
-
-                document.body.appendChild(canvas);
-
-                await page.render({ canvasContext: context, viewport }).promise;
+                canvas.width = viewport.width;
+                
+                // Clear the loading message and append canvas
+                messageElement.style.display = 'none';
+                canvasContainer.appendChild(canvas);
+                
+                // Render the page
+                await page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                }).promise;
+                
             } catch (error) {
-                console.error('Error:', error);
+                showErrorMessage('Error loading prayer times: ' + error.message);
+                console.error('Error rendering PDF:', error);
             }
         }
 
+        function showErrorMessage(message) {
+            const messageElement = document.getElementById('message');
+            messageElement.textContent = message;
+            messageElement.classList.remove('message');
+            messageElement.classList.add('error-message');
+        }
+
+        // Run when the page loads
         document.addEventListener('DOMContentLoaded', renderPage);
     </script>
 </body>
