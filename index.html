@@ -94,105 +94,71 @@
 
         // Render the specific page from the PDF
         async function renderPage() {
+    const messageElement = document.getElementById('message');
+    const canvasContainer = document.getElementById('canvas-container');
+    const pageNum = getPageForToday(today);
 
+    // Handle out-of-range dates
+    if (pageNum === -1) {
+        // Date before PDF start date
+        showErrorMessage(`The prayer times for today are not available. The calendar starts from ${pdfStartDate.toLocaleDateString('en-US', options)}.`);
+        return; // Important: Return here
+    } else if (pageNum === -2) {
+        // Date after PDF end date
+        showErrorMessage(`The prayer times for today are not available. The calendar only goes up to ${pdfEndDate.toLocaleDateString('en-US', options)}.`);
+        return; // Important: Return here
+    }
 
-            try {
-                // Load the PDF
-                const loadingTask = pdfjsLib.getDocument(pdfUrl);
-                const pdf = await loadingTask.promise;
+    try {
+        // Load the PDF
+        const loadingTask = pdfjsLib.getDocument(pdfUrl);
+        const pdf = await loadingTask.promise;
 
-                // ... page number check ...
-
-                // Get the specific page
-                const page = await pdf.getPage(pageNum);
-
-                // Set scale based on viewport
-                let scale = 2; // Increased scale
-                const viewport = page.getViewport({ scale: scale });
-
-                // Create canvas element
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                const devicePixelRatio = window.devicePixelRatio || 1;
-
-                // Adjust canvas size for high-DPI displays
-                canvas.width = viewport.width * devicePixelRatio;
-                canvas.height = viewport.height * devicePixelRatio;
-
-                // Set CSS size to the original viewport size
-                canvas.style.width = viewport.width + 'px';
-                canvas.style.height = viewport.height + 'px';
-
-                // Scale the context to the device pixel ratio
-                context.scale(devicePixelRatio, devicePixelRatio);
-
-                // Clear the loading message and append canvas
-                messageElement.style.display = 'none';
-                canvasContainer.appendChild(canvas);
-
-                // Render the page
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport
-                }).promise;
-
-            } catch (error) {
-                showErrorMessage('Error loading prayer times: ' + error.message);
-                console.error('Error rendering PDF:', error);
-            }            
-            const messageElement = document.getElementById('message');
-            const canvasContainer = document.getElementById('canvas-container');
-            const pageNum = getPageForToday(today);
-            
-            // Handle out-of-range dates
-            if (pageNum === -1) {
-                // Date before PDF start date
-                showErrorMessage(`The prayer times for today are not available. The calendar starts from ${pdfStartDate.toLocaleDateString('en-US', options)}.`);
-                return;
-            } else if (pageNum === -2) {
-                // Date after PDF end date
-                showErrorMessage(`The prayer times for today are not available. The calendar only goes up to ${pdfEndDate.toLocaleDateString('en-US', options)}.`);
-                return;
-            }
-            
-            try {
-                // Load the PDF
-                const loadingTask = pdfjsLib.getDocument(pdfUrl);
-                const pdf = await loadingTask.promise;
-                
-                // Check if the requested page exists
-                if (pageNum > pdf.numPages) {
-                    showErrorMessage('Error: The requested page does not exist in the PDF.');
-                    return;
-                }
-                
-                // Get the specific page
-                const page = await pdf.getPage(pageNum);
-                
-                // Set scale based on viewport
-                const viewport = page.getViewport({ scale: 1.5 });
-                
-                // Create canvas element
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                
-                // Clear the loading message and append canvas
-                messageElement.style.display = 'none';
-                canvasContainer.appendChild(canvas);
-                
-                // Render the page
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport
-                }).promise;
-                
-            } catch (error) {
-                showErrorMessage('Error loading prayer times: ' + error.message);
-                console.error('Error rendering PDF:', error);
-            }
+        // Check if the requested page exists
+        if (pageNum > pdf.numPages) {
+            showErrorMessage('Error: The requested page does not exist in the PDF.');
+            return; // Important: Return here.
         }
+
+        // Get the specific page
+        const page = await pdf.getPage(pageNum);
+
+        // Set scale based on viewport
+        let scale = 2; // Increased scale
+        const viewport = page.getViewport({ scale: scale });
+
+        // Create canvas element
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        const devicePixelRatio = window.devicePixelRatio || 1;
+
+        // Adjust canvas size for high-DPI displays
+        canvas.width = viewport.width * devicePixelRatio;
+        canvas.height = viewport.height * devicePixelRatio;
+
+        // Set CSS size to the original viewport size
+        canvas.style.width = viewport.width + 'px';
+        canvas.style.height = viewport.height + 'px';
+
+        // Scale the context to the device pixel ratio
+        context.scale(devicePixelRatio, devicePixelRatio);
+
+        // Clear the loading message and append canvas
+        messageElement.style.display = 'none';
+        canvasContainer.appendChild(canvas);
+
+        // Render the page
+        await page.render({
+            canvasContext: context,
+            viewport: viewport
+        }).promise;
+
+    } catch (error) {
+        showErrorMessage('Error loading prayer times: ' + error.message);
+        console.error('Error rendering PDF:', error);
+    }
+}        
+        
 
         function showErrorMessage(message) {
             const messageElement = document.getElementById('message');
