@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -92,6 +94,52 @@
 
         // Render the specific page from the PDF
         async function renderPage() {
+
+
+            try {
+                // Load the PDF
+                const loadingTask = pdfjsLib.getDocument(pdfUrl);
+                const pdf = await loadingTask.promise;
+
+                // ... page number check ...
+
+                // Get the specific page
+                const page = await pdf.getPage(pageNum);
+
+                // Set scale based on viewport
+                let scale = 2; // Increased scale
+                const viewport = page.getViewport({ scale: scale });
+
+                // Create canvas element
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                const devicePixelRatio = window.devicePixelRatio || 1;
+
+                // Adjust canvas size for high-DPI displays
+                canvas.width = viewport.width * devicePixelRatio;
+                canvas.height = viewport.height * devicePixelRatio;
+
+                // Set CSS size to the original viewport size
+                canvas.style.width = viewport.width + 'px';
+                canvas.style.height = viewport.height + 'px';
+
+                // Scale the context to the device pixel ratio
+                context.scale(devicePixelRatio, devicePixelRatio);
+
+                // Clear the loading message and append canvas
+                messageElement.style.display = 'none';
+                canvasContainer.appendChild(canvas);
+
+                // Render the page
+                await page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                }).promise;
+
+            } catch (error) {
+                showErrorMessage('Error loading prayer times: ' + error.message);
+                console.error('Error rendering PDF:', error);
+            }            
             const messageElement = document.getElementById('message');
             const canvasContainer = document.getElementById('canvas-container');
             const pageNum = getPageForToday(today);
@@ -108,13 +156,8 @@
             }
             
             try {
-                // Load the PDF with better options
-                const loadingTask = pdfjsLib.getDocument({
-                    url: pdfUrl,
-                    cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/cmaps/',
-                    cMapPacked: true,
-                });
-                
+                // Load the PDF
+                const loadingTask = pdfjsLib.getDocument(pdfUrl);
                 const pdf = await loadingTask.promise;
                 
                 // Check if the requested page exists
@@ -126,59 +169,23 @@
                 // Get the specific page
                 const page = await pdf.getPage(pageNum);
                 
-                // Get the device pixel ratio
-                const pixelRatio = window.devicePixelRatio || 1;
-                
-                // Calculate a better scale based on container size
-                const container = document.querySelector('.container');
-                const containerWidth = container.clientWidth - 40; // Accounting for padding
-                
-                // Get the original dimensions
-                const viewport = page.getViewport({ scale: 1.0 });
-                
-                // Calculate scale to fit container width
-                const scaleToFit = containerWidth / viewport.width;
-                
-                // Create a higher resolution viewport for rendering
-                const scaledViewport = page.getViewport({ 
-                    scale: scaleToFit * pixelRatio * 1.5 // Higher scale for better quality
-                });
+                // Set scale based on viewport
+                const viewport = page.getViewport({ scale: 1.5 });
                 
                 // Create canvas element
                 const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d', { alpha: false });
-                
-                // Set physical size for high resolution
-                canvas.height = scaledViewport.height;
-                canvas.width = scaledViewport.width;
-                
-                // Set display size
-                canvas.style.height = `${scaledViewport.height / pixelRatio}px`;
-                canvas.style.width = `${scaledViewport.width / pixelRatio}px`;
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
                 
                 // Clear the loading message and append canvas
                 messageElement.style.display = 'none';
                 canvasContainer.appendChild(canvas);
                 
-                // Render the page with improved options
+                // Render the page
                 await page.render({
                     canvasContext: context,
-                    viewport: scaledViewport,
-                    intent: 'print', // 'print' provides higher quality than 'display'
-                    renderInteractiveForms: false,
-                    canvasFactory: {
-                        create: function(width, height) {
-                            return {
-                                canvas: canvas,
-                                context: context
-                            };
-                        },
-                        reset: function(canvasAndContext, width, height) {
-                            canvasAndContext.context.setTransform(1, 0, 0, 1, 0, 0);
-                            canvasAndContext.context.clearRect(0, 0, width, height);
-                            return canvasAndContext;
-                        }
-                    }
+                    viewport: viewport
                 }).promise;
                 
             } catch (error) {
